@@ -871,15 +871,7 @@ def render_fs_dictionary():
             unsafe_allow_html=True,
         )
 
-        word = st.text_input(
-            "뉴스에서 본 낯선 단어를 입력",
-            placeholder="뉴스 등에서 본 낯선 낱말, 단어를 입력하세요.",
-            key="dict_word",
-            label_visibility="collapsed",
-        )
-
-        st.write("")
-        st.markdown(naver_dict_link_card(word.strip()), unsafe_allow_html=True)
+        st.markdown(naver_dict_link_card(""), unsafe_allow_html=True)
 
 
 def render_factsquad_page():
