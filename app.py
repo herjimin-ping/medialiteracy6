@@ -569,9 +569,13 @@ def fetch_dict(word: str):
 
 
 @st.cache_data(show_spinner=False)
-def img_b64(path: str) -> str:
-    with open(path, "rb") as f:
-        return b64encode(f.read()).decode()
+def img_b64(path: str):
+    """이미지를 base64로 반환. 파일이 없으면 앱이 죽지 않도록 None을 반환한다."""
+    try:
+        with open(path, "rb") as f:
+            return b64encode(f.read()).decode()
+    except Exception:
+        return None
 
 
 def title_icon_html(path: str, fallback_emoji: str, size: int = 28) -> str:
@@ -605,10 +609,16 @@ def sidebar_brand_html(icon_path: str, fallback_emoji: str, title_kr: str, title
 
 def holo_card(img_path: str, unit_no: str, name: str, role_line: str, meaning: str):
     b64 = img_b64(img_path)
+    img_html = (
+        f'<img src="data:image/png;base64,{b64}">'
+        if b64 else
+        '<div style="display:flex;align-items:center;justify-content:center;'
+        'height:100%;font-size:64px;background:#0b172a;">🕵️</div>'
+    )
     st.markdown(
         f"""
         <div class="holo-card">
-            <img src="data:image/png;base64,{b64}">
+            {img_html}
             <div class="holo-topline"><span>UNIT.{unit_no}</span><span>● ACTIVE</span></div>
             <div class="holo-caption">
                 <div class="holo-name">{name}</div>
@@ -623,6 +633,12 @@ def holo_card(img_path: str, unit_no: str, name: str, role_line: str, meaning: s
 
 def avatar_badge(img_path: str, size: int = 52) -> str:
     b64 = img_b64(img_path)
+    if not b64:
+        return (
+            f'<div class="avatar-circle" style="width:{size}px;height:{size}px;'
+            f'display:flex;align-items:center;justify-content:center;'
+            f'font-size:{int(size * 0.55)}px;">🙂</div>'
+        )
     return f'<div class="avatar-circle" style="width:{size}px;height:{size}px;"><img src="data:image/png;base64,{b64}"></div>'
 
 
@@ -677,10 +693,16 @@ def render_fs_hero():
         )
         st.write("")
     else:
+        mascot_b64 = img_b64("images/mascot-main.png")
+        mascot_html = (
+            f'<img src="data:image/png;base64,{mascot_b64}">'
+            if mascot_b64 else
+            '<span style="font-size:56px;line-height:1;">🕵️</span>'
+        )
         st.markdown(
             f"""
             <div class="brand-row">
-                <img src="data:image/png;base64,{img_b64('images/mascot-main.png')}">
+                {mascot_html}
                 <div>
                     <div class="cyber-title">팩트수색대</div>
                     <div class="cyber-sub">FACT SEARCH SQUAD</div>
@@ -839,50 +861,25 @@ def render_fs_stats():
 
 
 def render_fs_dictionary():
-    st.subheader("용어 사전 — 이 단어, 무슨 뜻?")
+    st.subheader("용어 사전")
     with st.container(border=True, key="card-dict"):
         st.markdown(
             f"<div style='display:flex;align-items:center;gap:8px;margin-bottom:8px;'>"
             f"{avatar_badge('images/avatar-mascot.png', size=60)}"
-            f"<span class='card-title' style='font-size:16px;'>📖 뉴스 용어 사전</span>"
+            f"<span class='card-title' style='font-size:16px;'>📖 이 낱말, 무슨 뜻?</span>"
             f"</div>",
             unsafe_allow_html=True,
         )
 
-        def _run_dict_search():
-            w = st.session_state.get("dict_word", "").strip()
-            if w:
-                entries, debug = fetch_dict(w)
-            else:
-                entries, debug = None, []
-            st.session_state.dict_entries = entries
-            st.session_state.dict_debug = debug
-            st.session_state.dict_searched_word = w
-
-        st.text_input(
+        word = st.text_input(
             "뉴스에서 본 낯선 단어를 입력",
-            placeholder="예: 필리버스터, 유예 (입력 후 Enter)",
+            placeholder="뉴스 등에서 본 낯선 낱말, 단어를 입력하세요.",
             key="dict_word",
-            on_change=_run_dict_search,
+            label_visibility="collapsed",
         )
 
-        entries = st.session_state.get("dict_entries")
-        searched_word = st.session_state.get("dict_searched_word")
-        debug_info = st.session_state.get("dict_debug")
-        if entries:
-            for e in entries[:5]:
-                st.markdown(f"**{e['word']}** · _{e['source']}_")
-                st.write(e["definition"])
-        elif searched_word:
-            st.caption(f'"{searched_word}"에 대한 뜻풀이를 찾지 못했습니다. 아래 네이버 사전에서 다시 찾아보세요.')
-            if debug_info:
-                with st.expander("🔧 왜 안 됐는지 보기 (선생님용)"):
-                    for line in debug_info:
-                        st.code(line)
-
-        if searched_word:
-            st.write("")
-            st.markdown(naver_dict_link_card(searched_word), unsafe_allow_html=True)
+        st.write("")
+        st.markdown(naver_dict_link_card(word.strip()), unsafe_allow_html=True)
 
 
 def render_factsquad_page():
